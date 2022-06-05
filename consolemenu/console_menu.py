@@ -4,7 +4,10 @@ import platform
 import threading
 
 import os
+import importlib
+from typing import Dict
 
+import consolemenu.items
 from consolemenu.menu_formatter import MenuFormatBuilder
 from consolemenu.screen import Screen
 
@@ -40,7 +43,9 @@ class ConsoleMenu(object):
 
     def __init__(self, title=None, subtitle=None, screen=None, formatter=None,
                  prologue_text=None, epilogue_text=None, clear_screen=True,
-                 show_exit_option=True, exit_option_text='Exit'):
+                 show_exit_option=True, exit_option_text='Exit',
+                 menudef: Dict = None):
+
         if screen is None:
             screen = Screen()
         self.screen = screen
@@ -78,6 +83,9 @@ class ConsoleMenu(object):
 
         self._main_thread = None
 
+        if menudef:
+            self.load_from_dict(menudef)
+
         self._running = threading.Event()
 
     def __repr__(self):
@@ -103,6 +111,39 @@ class ConsoleMenu(object):
             return self.items[self.current_option]
         else:
             return None
+
+    def load_from_dict(self, menudef):
+        for item in menudef['main']['items']:
+            itm = None
+            menuclass = item['class'].lower()
+            if menuclass == 'menuitem':
+                itm = MenuItem(item['text'], self)
+
+            elif menuclass == 'commanditem':
+                itm = consolemenu.items.CommandItem(item['text'], item['action'])
+
+            elif menuclass == 'classfunctionitem':
+                namespace, func_name = item['action'].rsplit('.', 1)
+                mod_name, class_name = namespace.rsplit('.', 1)
+                mod = importlib.import_module(mod_name)
+                klass = getattr(mod, class_name)
+
+                instance = klass()
+                func = getattr(instance, func_name)
+
+                kwargs = None
+                itm = consolemenu.items.FunctionItem(item['text'], func, item['args'], kwargs)
+
+            elif menuclass == 'modulefunctionitem':
+                mod_name, func_name = item['action'].rsplit('.', 1)
+                mod = importlib.import_module(mod_name)
+                func = getattr(mod, func_name)
+
+                kwargs = None
+                itm = consolemenu.items.FunctionItem(item['text'], func, item['args'], kwargs)
+
+            if itm:
+                self.append_item(itm)
 
     def append_item(self, item):
         """
@@ -494,3 +535,4 @@ def clear_terminal():
         os.system('cls')
     else:
         os.system('reset')
+
