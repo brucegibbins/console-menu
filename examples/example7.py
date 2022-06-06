@@ -8,8 +8,8 @@ from consolemenu.items import *
 import yaml
 
 
-def helloworld():
-    print("HelloWorld")
+def helloworld(txt):
+    print(f"HelloWorld. {txt}")
     PromptUtils(Screen()).enter_to_continue()
 
 
@@ -30,7 +30,7 @@ def main():
             - text: Call Module Function
               class: ModuleFunctionItem
               action: examples.example7.helloworld 
-              args:
+              args: ["Argument 1"]
 
             - text: Command
               class: CommandItem
